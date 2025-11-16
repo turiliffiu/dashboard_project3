@@ -238,7 +238,9 @@ Crea il file systemd (come root):
 
 Incolla questa configurazione:
 
-     ini[Unit]
+     ini
+     
+     [Unit]
      Description=Gunicorn daemon for Dashboard Django project
      After=network.target
      
