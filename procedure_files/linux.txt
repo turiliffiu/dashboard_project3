@@ -1,0 +1,23 @@
+[Gestione File]
+Operazioni su file e directory
+
+COMANDO: Lista dettagliata
+ls -lah
+
+COMANDO: Copia ricorsiva
+cp -r /sorgente /destinazione
+
+COMANDO: Trova file
+find /path -name "*.txt"
+
+[Monitoraggio Sistema]
+Verifica risorse e processi
+
+COMANDO: Utilizzo disco
+df -h
+
+COMANDO: Memoria RAM
+free -h
+
+COMANDO: Processi attivi
+top

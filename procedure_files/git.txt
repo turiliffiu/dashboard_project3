@@ -1,0 +1,23 @@
+[Operazioni Base]
+Comandi fondamentali Git
+
+COMANDO: Inizializza repository
+git init
+
+COMANDO: Stato modifiche
+git status
+
+COMANDO: Aggiungi tutti i file
+git add .
+
+COMANDO: Commit
+git commit -m "messaggio"
+
+[Sincronizzazione]
+Push e pull con remote
+
+COMANDO: Push su main
+git push origin main
+
+COMANDO: Pull da remote
+git pull origin main

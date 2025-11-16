@@ -1,0 +1,711 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Procedure Operative</title>
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1>📋 Dashboard Procedure Operative</h1>
+                    <p class="subtitle">Seleziona una procedura per visualizzare i comandi e copiarli facilmente</p>
+                </div>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    {% if user.profile.can_create %}
+                    <button class="btn btn-upload" onclick="openUploadModal()">
+                        ➕ Carica Nuovo File
+                    </button>
+                    {% endif %}
+                    <div class="user-menu">
+                        <button class="btn-user" onclick="toggleUserMenu()">
+                            👤 {{ user.username }}
+                        </button>
+                        <div class="user-dropdown" id="userDropdown">
+                            <a href="{% url 'procedures:profile' %}">👤 Il Mio Profilo</a>
+                            {% if user.profile.role == 'admin' %}
+                            <a href="{% url 'procedures:user_management' %}">👥 Gestione Utenti</a>
+                            {% endif %}
+                            <div class="dropdown-divider"></div>
+                            <a href="{% url 'procedures:logout' %}" style="color: #d63031;">🚪 Esci</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid" id="cardsGrid">
+            {% for item in categories %}
+            <div class="card" 
+                 data-category-id="{{ item.category.id }}" 
+                 data-category-name="{{ item.category.name }}"
+                 data-category-icon="{{ item.category.icon }}"
+                 data-category-desc="{{ item.category.description }}"
+                 data-category-filename="{{ item.category.filename }}"
+                 data-can-edit="{{ item.can_edit|yesno:'true,false' }}"
+                 data-can-delete="{{ item.can_delete|yesno:'true,false' }}">
+                <div class="card-actions">
+                    <button class="btn-icon download-btn" title="Scarica File">📥</button>
+                    {% if item.can_edit %}
+                    <button class="btn-icon edit-btn" title="Modifica">✏️</button>
+                    {% endif %}
+                    {% if item.can_delete %}
+                    <button class="btn-icon btn-danger delete-btn" title="Elimina">🗑️</button>
+                    {% endif %}
+                </div>
+                <div class="card-clickable">
+                    <div class="card-icon">{{ item.category.icon }}</div>
+                    <div class="card-title">{{ item.category.name }}</div>
+                    <div class="card-desc">{{ item.category.description }}</div>
+                    {% if item.category.owner %}
+                    <div class="card-owner">👤 {{ item.category.owner.username }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="content-panel" id="contentPanel">
+            <div class="panel-header">
+                <h2 class="panel-title" id="panelTitle"></h2>
+                <button class="btn" onclick="closePanel()">✕ Chiudi</button>
+            </div>
+            <div id="panelContent"></div>
+        </div>
+
+        <!-- Modal Upload -->
+        <div class="modal" id="uploadModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>📤 Carica Nuovo File di Procedura</h2>
+                    <button class="btn-close" onclick="closeUploadModal()">✕</button>
+                </div>
+                <div class="modal-body">
+                    <form id="uploadForm" enctype="multipart/form-data">
+                        <div class="form-group">
+                            <label for="fileInput">File .txt *</label>
+                            <input type="file" id="fileInput" name="file" accept=".txt" required>
+                            <small>Solo file .txt sono consentiti</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="nameInput">Nome Categoria *</label>
+                            <input type="text" id="nameInput" name="name" placeholder="Es: Comandi Python" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="iconInput">Icona Emoji *</label>
+                            <input type="text" id="iconInput" name="icon" placeholder="Es: 🐍" maxlength="2" required>
+                            <small>Usa una emoji per rappresentare la categoria</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="descInput">Descrizione *</label>
+                            <textarea id="descInput" name="description" placeholder="Breve descrizione della procedura" rows="3" required></textarea>
+                        </div>
+
+                        <div class="alert alert-info" style="margin-top: 20px;">
+                            <strong>📝 Formato file richiesto:</strong><br>
+                            <code style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px;">
+                                [SEZIONE]<br>
+                                Descrizione sezione<br>
+                                <br>
+                                COMANDO: Etichetta comando<br>
+                                comando da eseguire
+                            </code>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" onclick="closeUploadModal()">Annulla</button>
+                            <button type="submit" class="btn btn-primary">📤 Carica File</button>
+                        </div>
+                    </form>
+                    
+                    <div id="uploadProgress" style="display: none;">
+                        <div class="loading">Caricamento in corso...</div>
+                    </div>
+                    
+                    <div id="uploadResult"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Modifica Categoria -->
+        <div class="modal" id="editModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>✏️ Modifica Categoria</h2>
+                    <button class="btn-close" onclick="closeEditModal()">✕</button>
+                </div>
+                <div class="modal-body">
+                    <form id="editForm">
+                        <input type="hidden" id="editCategoryId">
+                        <input type="hidden" id="editFilename">
+                        
+                        <div class="form-group">
+                            <label for="editNameInput">Nome Categoria *</label>
+                            <input type="text" id="editNameInput" name="name" placeholder="Es: Comandi Python" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="editIconInput">Icona Emoji *</label>
+                            <input type="text" id="editIconInput" name="icon" placeholder="Es: 🐍" maxlength="2" required>
+                            <small>Usa una emoji per rappresentare la categoria</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="editDescInput">Descrizione *</label>
+                            <textarea id="editDescInput" name="description" placeholder="Breve descrizione della procedura" rows="3" required></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="editFileInput">Aggiorna File (opzionale)</label>
+                            <input type="file" id="editFileInput" name="file" accept=".txt">
+                            <small>Lascia vuoto per mantenere il file esistente</small>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Annulla</button>
+                            <button type="submit" class="btn btn-primary">💾 Salva Modifiche</button>
+                        </div>
+                    </form>
+                    
+                    <div id="editProgress" style="display: none;">
+                        <div class="loading">Salvataggio in corso...</div>
+                    </div>
+                    
+                    <div id="editResult"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Conferma Eliminazione -->
+        <div class="modal" id="deleteModal">
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h2>⚠️ Conferma Eliminazione</h2>
+                    <button class="btn-close" onclick="closeDeleteModal()">✕</button>
+                </div>
+                <div class="modal-body">
+                    <p id="deleteMessage" style="font-size: 1.1em; color: #333; margin-bottom: 20px;"></p>
+                    
+                    <div class="alert" style="background: #fff3cd; border-left-color: #ffc107; color: #856404;">
+                        ⚠️ <strong>Attenzione:</strong> Questa azione eliminerà sia la categoria che il file .txt associato e non può essere annullata!
+                    </div>
+
+                    <input type="hidden" id="deleteCategoryId">
+                    
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">Annulla</button>
+                        <button type="button" class="btn" style="background: #dc3545;" onclick="executeDelete()">🗑️ Elimina Definitivamente</button>
+                    </div>
+                    
+                    <div id="deleteProgress" style="display: none;">
+                        <div class="loading">Eliminazione in corso...</div>
+                    </div>
+                    
+                    <div id="deleteResult"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Funzione per ottenere il CSRF token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        const csrftoken = getCookie('csrftoken');
+
+
+        function downloadFile(categoryId, filename) {
+            const downloadUrl = `/api/category/${categoryId}/download/`;
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            console.log(`Download avviato: ${filename}`);
+        }
+
+
+        // ============================================
+        // EVENT DELEGATION PER CARD
+        // ============================================
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const grid = document.getElementById('cardsGrid');
+            
+            // Gestione click su tutto il grid
+            grid.addEventListener('click', function(e) {
+                const target = e.target;
+
+
+                // Gestione click sul pulsante download
+                if (target.classList.contains('download-btn') || target.closest('.download-btn')) {
+                    e.stopPropagation();
+                    const card = target.closest('.card');
+                    const categoryId = card.getAttribute('data-category-id');
+                    const filename = card.getAttribute('data-category-filename');
+
+                    downloadFile(categoryId, filename);
+                    return;
+                }
+                // =========================================
+
+                // Gestione click sul pulsante modifica
+                if (target.classList.contains('edit-btn') || target.closest('.edit-btn')) {
+                    e.stopPropagation();
+                    const card = target.closest('.card');
+                    const categoryId = card.getAttribute('data-category-id');
+                    const name = card.getAttribute('data-category-name');
+                    const icon = card.getAttribute('data-category-icon');
+                    const desc = card.getAttribute('data-category-desc');
+                    const filename = card.getAttribute('data-category-filename');
+                    
+                    openEditModal(categoryId, name, icon, desc, filename);
+                    return;
+                }
+                
+                // Gestione click sul pulsante elimina
+                if (target.classList.contains('delete-btn') || target.closest('.delete-btn')) {
+                    e.stopPropagation();
+                    const card = target.closest('.card');
+                    const categoryId = card.getAttribute('data-category-id');
+                    const name = card.getAttribute('data-category-name');
+                    
+                    confirmDelete(categoryId, name);
+                    return;
+                }
+                
+                // Gestione click sulla card per caricare la procedura
+                const clickableArea = target.closest('.card-clickable');
+                if (clickableArea) {
+                    const card = clickableArea.closest('.card');
+                    const filename = card.getAttribute('data-category-filename');
+                    const icon = card.getAttribute('data-category-icon');
+                    const name = card.getAttribute('data-category-name');
+                    
+                    loadProcedure(filename, icon, name, card);
+                }
+            });
+        });
+
+        async function loadProcedure(filename, icon, title, cardElement) {
+            const panel = document.getElementById('contentPanel');
+            const panelTitle = document.getElementById('panelTitle');
+            const content = document.getElementById('panelContent');
+
+            // Aggiorna card attiva
+            document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
+            if (cardElement) {
+                cardElement.classList.add('active');
+            }
+
+            // Resetta il contenuto PRIMA di caricare
+            panelTitle.textContent = icon + ' ' + title;
+            content.innerHTML = '<div class="loading">Caricamento...</div>';
+            panel.classList.add('active');
+            panel.scrollIntoView({ behavior: 'smooth' });
+
+            try {
+                const response = await fetch(`/api/procedure/${filename}/`);
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error(data.error);
+                }
+
+                let html = '<div class="alert alert-info">💡 Clicca sul pulsante "Copia" per copiare rapidamente i comandi negli appunti</div>';
+
+                data.sections.forEach(section => {
+                    html += `
+                        <div class="section">
+                            <h3 class="section-title">${section.title}</h3>
+                            <p class="section-desc">${section.desc}</p>
+                    `;
+
+                    section.commands.forEach((cmd, idx) => {
+                        const uniqueId = `cmd-${filename}-${idx}`;
+                        html += `
+                            <div style="margin-bottom: 10px;">
+                                <strong>${cmd.label}:</strong>
+                                <div class="code-block">
+                                    <button class="copy-btn" onclick="copyToClipboard('${uniqueId}', this)">📋 Copia</button>
+                                    <code id="${uniqueId}">${escapeHtml(cmd.cmd)}</code>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    html += `</div>`;
+                });
+
+                content.innerHTML = html;
+
+            } catch (error) {
+                content.innerHTML = `<div class="alert" style="background: #f8d7da; border-left-color: #dc3545; color: #721c24;">❌ Errore nel caricamento: ${error.message}</div>`;
+            }
+        }
+
+        function copyToClipboard(elementId, button) {
+            const code = document.getElementById(elementId).textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                button.textContent = '✓ Copiato!';
+                button.classList.add('copied');
+                setTimeout(() => {
+                    button.textContent = '📋 Copia';
+                    button.classList.remove('copied');
+                }, 2000);
+            });
+        }
+
+        function closePanel() {
+            document.getElementById('contentPanel').classList.remove('active');
+            document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ============================================
+        // GESTIONE UPLOAD MODAL
+        // ============================================
+        
+        function openUploadModal() {
+            document.getElementById('uploadModal').classList.add('active');
+            document.getElementById('uploadForm').reset();
+            document.getElementById('uploadResult').innerHTML = '';
+        }
+
+        function closeUploadModal() {
+            document.getElementById('uploadModal').classList.remove('active');
+        }
+
+        // Gestione Upload Form
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const progress = document.getElementById('uploadProgress');
+            const result = document.getElementById('uploadResult');
+            
+            progress.style.display = 'block';
+            result.innerHTML = '';
+            
+            try {
+                const response = await fetch('/api/upload/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                progress.style.display = 'none';
+                
+                if (data.success) {
+                    result.innerHTML = `
+                        <div class="alert" style="background: #d4edda; border-left-color: #28a745; color: #155724; margin-top: 20px;">
+                            ✅ ${data.message}<br>
+                            <strong>Categoria:</strong> ${data.category.icon} ${data.category.name}
+                        </div>
+                    `;
+                    
+                    // Aggiungi la nuova card alla griglia
+                    const grid = document.getElementById('cardsGrid');
+                    const newCard = document.createElement('div');
+                    newCard.className = 'card';
+                    newCard.setAttribute('data-category-id', data.category.id);
+                    newCard.setAttribute('data-category-name', data.category.name);
+                    newCard.setAttribute('data-category-icon', data.category.icon);
+                    newCard.setAttribute('data-category-desc', data.category.description);
+                    newCard.setAttribute('data-category-filename', data.category.filename);
+                    
+                    newCard.innerHTML = `
+                        <div class="card-actions">
+                            <button class="btn-icon download-btn" title="Scarica File">📥</button>
+                            <button class="btn-icon edit-btn" title="Modifica">✏️</button>
+                            <button class="btn-icon btn-danger delete-btn" title="Elimina">🗑️</button>
+                        </div>
+
+                        <div class="card-clickable">
+                            <div class="card-icon">${data.category.icon}</div>
+                            <div class="card-title">${data.category.name}</div>
+                            <div class="card-desc">${data.category.description}</div>
+                        </div>
+                    `;
+                    grid.appendChild(newCard);
+                    
+                    setTimeout(() => {
+                        closeUploadModal();
+                    }, 2000);
+                    
+                } else {
+                    result.innerHTML = `
+                        <div class="alert" style="background: #f8d7da; border-left-color: #dc3545; color: #721c24; margin-top: 20px;">
+                            ❌ ${data.error}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                progress.style.display = 'none';
+                result.innerHTML = `
+                    <div class="alert" style="background: #f8d7da; border-left-color: #dc3545; color: #721c24; margin-top: 20px;">
+                        ❌ Errore durante il caricamento: ${error.message}
+                    </div>
+                `;
+            }
+        });
+
+        // ============================================
+        // GESTIONE MODIFICA CATEGORIA
+        // ============================================
+        
+        function openEditModal(categoryId, name, icon, description, filename) {
+            document.getElementById('editCategoryId').value = categoryId;
+            document.getElementById('editFilename').value = filename;
+            document.getElementById('editNameInput').value = name;
+            document.getElementById('editIconInput').value = icon;
+            document.getElementById('editDescInput').value = description;
+            document.getElementById('editResult').innerHTML = '';
+            document.getElementById('editFileInput').value = '';
+            document.getElementById('editModal').classList.add('active');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.remove('active');
+        }
+
+        document.getElementById('editForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const categoryId = document.getElementById('editCategoryId').value;
+            const progress = document.getElementById('editProgress');
+            const result = document.getElementById('editResult');
+            
+            progress.style.display = 'block';
+            result.innerHTML = '';
+            
+            try {
+                // Aggiorna i metadati della categoria
+                const formData = new FormData();
+                formData.append('name', document.getElementById('editNameInput').value);
+                formData.append('icon', document.getElementById('editIconInput').value);
+                formData.append('description', document.getElementById('editDescInput').value);
+                
+                const response = await fetch(`/api/category/${categoryId}/update/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error(data.error);
+                }
+                
+                // Se c'è un nuovo file, aggiornalo
+                const fileInput = document.getElementById('editFileInput');
+                if (fileInput.files.length > 0) {
+                    const fileFormData = new FormData();
+                    fileFormData.append('file', fileInput.files[0]);
+                    
+                    const fileResponse = await fetch(`/api/category/${categoryId}/update-file/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': csrftoken
+                        },
+                        body: fileFormData
+                    });
+                    
+                    const fileData = await fileResponse.json();
+                    if (!fileData.success) {
+                        throw new Error(fileData.error);
+                    }
+                }
+                
+                progress.style.display = 'none';
+                result.innerHTML = `
+                    <div class="alert" style="background: #d4edda; border-left-color: #28a745; color: #155724; margin-top: 20px;">
+                        ✅ Categoria aggiornata con successo!
+                    </div>
+                `;
+                
+                // Aggiorna la card nella griglia
+                const card = document.querySelector(`[data-category-id="${categoryId}"]`);
+                if (card) {
+                    card.setAttribute('data-category-name', data.category.name);
+                    card.setAttribute('data-category-icon', data.category.icon);
+                    card.setAttribute('data-category-desc', data.category.description);
+                    
+                    card.querySelector('.card-icon').textContent = data.category.icon;
+                    card.querySelector('.card-title').textContent = data.category.name;
+                    card.querySelector('.card-desc').textContent = data.category.description;
+                }
+                
+                setTimeout(() => {
+                    closeEditModal();
+                }, 1500);
+                
+            } catch (error) {
+                progress.style.display = 'none';
+                result.innerHTML = `
+                    <div class="alert" style="background: #f8d7da; border-left-color: #dc3545; color: #721c24; margin-top: 20px;">
+                        ❌ Errore: ${error.message}
+                    </div>
+                `;
+            }
+        });
+
+        // ============================================
+        // GESTIONE ELIMINAZIONE CATEGORIA
+        // ============================================
+        
+        function confirmDelete(categoryId, categoryName) {
+            document.getElementById('deleteCategoryId').value = categoryId;
+            document.getElementById('deleteMessage').textContent = `Sei sicuro di voler eliminare la categoria "${categoryName}"?`;
+            document.getElementById('deleteResult').innerHTML = '';
+            document.getElementById('deleteModal').classList.add('active');
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').classList.remove('active');
+        }
+
+        async function executeDelete() {
+            const categoryId = document.getElementById('deleteCategoryId').value;
+            const progress = document.getElementById('deleteProgress');
+            const result = document.getElementById('deleteResult');
+            
+            progress.style.display = 'block';
+            result.innerHTML = '';
+            
+            try {
+                const response = await fetch(`/api/category/${categoryId}/delete/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrftoken
+                    }
+                });
+                
+                const data = await response.json();
+                
+                progress.style.display = 'none';
+                
+                if (data.success) {
+                    result.innerHTML = `
+                        <div class="alert" style="background: #d4edda; border-left-color: #28a745; color: #155724; margin-top: 20px;">
+                            ✅ ${data.message}
+                        </div>
+                    `;
+                    
+                    // Rimuovi la card dalla griglia
+                    const card = document.querySelector(`[data-category-id="${categoryId}"]`);
+                    if (card) {
+                        card.style.animation = 'fadeOut 0.3s ease';
+                        setTimeout(() => {
+                            card.remove();
+                        }, 300);
+                    }
+                    
+                    setTimeout(() => {
+                        closeDeleteModal();
+                    }, 1500);
+                    
+                } else {
+                    result.innerHTML = `
+                        <div class="alert" style="background: #f8d7da; border-left-color: #dc3545; color: #721c24; margin-top: 20px;">
+                            ❌ ${data.error}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                progress.style.display = 'none';
+                result.innerHTML = `
+                    <div class="alert" style="background: #f8d7da; border-left-color: #dc3545; color: #721c24; margin-top: 20px;">
+                        ❌ Errore: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Chiudi modal cliccando fuori
+        window.onclick = function(event) {
+            const uploadModal = document.getElementById('uploadModal');
+            const editModal = document.getElementById('editModal');
+            const deleteModal = document.getElementById('deleteModal');
+            
+            if (event.target === uploadModal) {
+                closeUploadModal();
+            }
+            if (event.target === editModal) {
+                closeEditModal();
+            }
+            if (event.target === deleteModal) {
+                closeDeleteModal();
+            }
+        }
+        
+        // User menu toggle
+        function toggleUserMenu() {
+            const dropdown = document.getElementById('userDropdown');
+            dropdown.classList.toggle('show');
+        }
+        
+        // Close user menu when clicking outside
+        document.addEventListener('click', function(event) {
+            const userMenu = document.querySelector('.user-menu');
+            const dropdown = document.getElementById('userDropdown');
+            
+            if (!userMenu.contains(event.target) && dropdown) {
+                dropdown.classList.remove('show');
+            }
+        });
+        
+        // Update card actions based on permissions
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.card');
+            cards.forEach(card => {
+                const canEdit = card.dataset.canEdit === 'true';
+                const canDelete = card.dataset.canDelete === 'true';
+                
+                if (!canEdit) {
+                    const editBtn = card.querySelector('.edit-btn');
+                    if (editBtn) editBtn.style.display = 'none';
+                }
+                
+                if (!canDelete) {
+                    const deleteBtn = card.querySelector('.delete-btn');
+                    if (deleteBtn) deleteBtn.style.display = 'none';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
