@@ -1,6 +1,6 @@
 # 🥘 Dashboard 
 
-Dashboard è un'applicazione web che permette di conservare e riutilizzare delle procedure operative con il semplice copia e incolla
+Si tratta di un'applicazione web basata su Django progettata per archiviare, gestire e riutilizzare procedure operative attraverso una semplice interfaccia copia-incolla. Fornisce una dashboard dove gli utenti possono organizzare comandi e procedure tecniche per categorie, rendendo facile l'accesso e la copia dei comandi più utilizzati.
 
 ## 🎯 Obiettivi principali
 
