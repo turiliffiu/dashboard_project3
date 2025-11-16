@@ -88,7 +88,7 @@ Modificare i seguneti parametri:
 
 ### 2. Clona repository
 `cd /opt/dashboard` <br>
-`git clone https://github.com/turiliffiu/dashboard_project2.git .` <br>
+`git clone https://github.com/turiliffiu/dashboard_project3.git .` <br>
 
 Ora la struttura del progetto Django sarà disponibile sul server
 
