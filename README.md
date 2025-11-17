@@ -16,7 +16,7 @@ Si tratta di un'applicazione web basata su Django progettata per archiviare, ges
 
 📦 Clonare il progetto da GitHub
 
-🐍 Creare l’ambiente virtuale e installare le dipendenze
+🐍 Creare l'ambiente virtuale e installare le dipendenze
 
 ⚙️ Configurare Django (migrazioni, static, .env)
 
@@ -24,7 +24,9 @@ Si tratta di un'applicazione web basata su Django progettata per archiviare, ges
 
 🌐 Esporre il sito con Nginx come reverse proxy
 
-🧩 Automatizzare l’avvio con systemd
+🔐 **CONFIGURARE I PERMESSI (IMPORTANTE!)**
+
+🧩 Automatizzare l'avvio con systemd
 
 ## 🪟 1️⃣ — Preparare il server su Proxmox
 ### Crea un Container Ubuntu:
@@ -92,7 +94,7 @@ Modificare i seguneti parametri:
 
 Ora la struttura del progetto Django sarà disponibile sul server
 
-## 🐍 4️⃣ — Creare l’ambiente virtuale e installare le dipendenze
+## 🐍 4️⃣ — Creare l'ambiente virtuale e installare le dipendenze
 ### 1. Crea virtual environment
 `python3.11 -m venv venv` <br>
 `source venv/bin/activate` <br>
@@ -148,12 +150,12 @@ Interrompi il server di sviluppo (CTRL+C) e installa Gunicorn:
 `pip install gunicorn`
 
 
-Prova a eseguire l’app:
+Prova a eseguire l'app:
 
 `gunicorn --bind 0.0.0.0:8000 dashboard_project.wsgi`
 
 
-(sostituisci nome_progetto con quello della tua cartella Django principale — quella dove c’è settings.py)
+(sostituisci nome_progetto con quello della tua cartella Django principale — quella dove c'è settings.py)
 
 ## 🌐 7️⃣ — Configura Nginx come reverse proxy
 
@@ -199,14 +201,44 @@ Inserisci:
          error_log /var/log/nginx/dashboard_error.log;
      }
 
-## Attiva la configurazione
-`ln -s /etc/nginx/sites-available/dashboard /etc/nginx/sites-enabled/` <br>
-`rm /etc/nginx/sites-enabled/default` <br>
+ATTENZIONE: assicurati che NON ci siano spazi all'inizio di ogni riga quando fai copia/incolla. Le righe devono iniziare senza spazi a sinistra.
+
+## 🔐 7.5️⃣ — CONFIGURA I PERMESSI (FONDAMENTALE!)
+
+**IMPORTANTE:** Questo passaggio è **CRITICO** per evitare errori 403 Forbidden sui file statici!
+
+Esegui i seguenti comandi come utente `root`:
+
+### 1. Permessi sulle directory parent
+`chmod 755 /opt` <br>
+`chmod 755 /opt/dashboard` <br>
+
+**Perché è necessario?** Nginx (utente `www-data`) deve poter "attraversare" tutte le directory fino ad arrivare ai file CSS/JS.
+
+### 2. Permessi sui file statici
 `chmod -R 755 /opt/dashboard/staticfiles` <br>
 `chown -R dashboard:dashboard /opt/dashboard/staticfiles` <br>
+
+### 3. Verifica che www-data possa leggere i file
+`sudo -u www-data cat /opt/dashboard/staticfiles/css/dashboard.css | head -5` <br>
+
+Se vedi il contenuto del CSS, i permessi sono corretti! ✅
+
+Se ottieni "Permission denied", ripeti i comandi chmod sopra.
+
+### 4. Attiva la configurazione Nginx
+`ln -s /etc/nginx/sites-available/dashboard /etc/nginx/sites-enabled/` <br>
+`rm /etc/nginx/sites-enabled/default` <br>
 `nginx -t` <br>
 `systemctl restart nginx` <br>
 `systemctl status nginx` <br>
+
+### 5. Test accesso diretto al CSS
+Apri nel browser:
+
+`http://IP_del_server/static/css/dashboard.css`
+
+**Dovresti vedere il contenuto del file CSS.** Se ottieni 403 o 404, rivedi i permessi!
 
 Torna all'utente dashboard:
 
@@ -240,8 +272,6 @@ Crea il file systemd (come root):
 
 Incolla questa configurazione:
 
-     ini
-     
      [Unit]
      Description=Gunicorn daemon for Dashboard Django project
      After=network.target
@@ -265,6 +295,8 @@ Incolla questa configurazione:
      [Install]
      WantedBy=multi-user.target
 
+ATTENZIONE: togliere gli spazi a sx quando si fa il copia e incolla
+
 Ricarica systemd e avvia il servizio:
 
 `systemctl daemon-reload` <br>
@@ -276,4 +308,44 @@ Verifica lo stato:
 `systemctl status gunicorn` <br>
 
 ## Ora Gunicorn partirà automaticamente all'avvio del server! 🎉
+
+---
+
+## 🔧 RISOLUZIONE PROBLEMI
+
+### Problema: Errore 403 Forbidden sui file statici
+
+**Sintomo:** La dashboard non carica i CSS, ottieni errore 403.
+
+**Soluzione:**
+1. Verifica permessi: `ls -la /opt/dashboard/staticfiles/css/`
+2. Esegui: `chmod 755 /opt && chmod 755 /opt/dashboard && chmod -R 755 /opt/dashboard/staticfiles`
+3. Testa: `sudo -u www-data cat /opt/dashboard/staticfiles/css/dashboard.css`
+4. Riavvia Nginx: `systemctl restart nginx`
+
+### Problema: CSS non si carica nella dashboard
+
+**Verifica:**
+1. File .env contiene `STATIC_URL=/static/` (con `/` finale!)
+2. Hai eseguito `python manage.py collectstatic`
+3. Nginx è configurato correttamente (senza spazi iniziali nelle righe)
+4. I permessi sono corretti (vedi sezione 7.5)
+
+### Problema: Gunicorn non si avvia
+
+**Verifica:**
+1. `systemctl status gunicorn` per vedere errori
+2. Log: `tail -f /var/log/dashboard/error.log`
+3. File .env esiste e contiene SECRET_KEY
+4. Virtual environment è attivo
+
+---
+
+## 📝 NOTE IMPORTANTI
+
+- ⚠️ **STATIC_URL** nel file .env deve terminare con `/` → `/static/`
+- ⚠️ **Permessi 755** sono necessari su `/opt`, `/opt/dashboard` e `staticfiles/`
+- ⚠️ La configurazione Nginx **NON deve avere spazi** all'inizio delle righe
+- ⚠️ Dopo ogni modifica a `.env`, riavvia Gunicorn: `systemctl restart gunicorn`
+- ⚠️ In produzione, **DEBUG deve essere False**
 
