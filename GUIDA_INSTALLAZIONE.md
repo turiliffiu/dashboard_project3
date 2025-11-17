@@ -6,6 +6,29 @@
 - Accesso root o sudo
 - Connessione Internet
 
+### Crea un Container Ubuntu:
+     
+      - arch: amd64
+      - cores: 1
+      - features: nesting=1
+      - hostname: dashboard
+      - memory: 2048
+      - net0: name=eth0,bridge=vmbr0,firewall=1,ip=dhcp
+      - ostype: ubuntu
+      - rootfs: local-lvm,size=20G
+      - swap: 2048
+      - unprivileged: 1
+
+Sulla shell del nuovo Container su Proxmox:
+
+`sudo nano /etc/ssh/sshd_config` <br>
+
+Modificare i seguneti parametri:
+
+     PermitRootLogin yes
+     PasswordAuthentication yes
+     PermitEmptyPasswords no
+
 ---
 
 ## 🎯 INSTALLAZIONE IN 3 PASSI
