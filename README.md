@@ -2,12 +2,6 @@
 
 Si tratta di un'applicazione web basata su Django progettata per archiviare, gestire e riutilizzare procedure operative attraverso una semplice interfaccia copia-incolla. Fornisce una dashboard dove gli utenti possono organizzare comandi e procedure tecniche per categorie, rendendo facile l'accesso e la copia dei comandi più utilizzati.
 
-## 🎯 Obiettivi principali
-
-- primo
-
-- secondo
-
 ## 🚀 PASSAGGI PRINCIPALI
 
 ✅ Preparare il server su Proxmox
