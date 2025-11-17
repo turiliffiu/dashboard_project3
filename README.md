@@ -139,6 +139,8 @@ Apri il browser e vai su:
 
 Se vedi il tuo sito Django → funziona!
 
+ATTENZIONE: per continuare con il server in deploy devi impostare `DEBUG=False` sul file `.env`
+
 ## 🔥 6️⃣ — Esegui con Gunicorn
 
 Interrompi il server di sviluppo (CTRL+C) e installa Gunicorn:
