@@ -138,6 +138,9 @@ systemctl enable supervisor
 print_info "Installazione Git..."
 apt install -y git
 
+# Curl
+apt install -y curl
+
 print_success "Tutti i pacchetti installati"
 
 ################################################################################
