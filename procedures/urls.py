@@ -18,6 +18,10 @@ urlpatterns = [
     path('api/user/<int:user_id>/update-role/', auth_views.update_user_role, name='update_user_role'),
     path('api/user/<int:user_id>/delete/', auth_views.delete_user, name='delete_user'),
     path('api/user/<int:user_id>/toggle-active/', auth_views.toggle_user_active, name='toggle_user_active'),
+
+    # API WYSIWYG Editor
+    path('api/procedure/create-wysiwyg/', views.create_procedure_wysiwyg, name='create_procedure_wysiwyg'),
+    path('api/category/<int:category_id>/update-wysiwyg/', views.update_procedure_wysiwyg, name='update_procedure_wysiwyg'),
     
     # API Procedure - Lettura
     path('api/procedure/<str:filename>/', views.get_procedure_content, name='get_procedure_content'),
@@ -28,10 +32,6 @@ urlpatterns = [
     path('api/category/<int:category_id>/update/', views.update_procedure_category, name='update_category'),
     path('api/category/<int:category_id>/delete/', views.delete_procedure_category, name='delete_category'),
     path('api/category/<int:category_id>/update-file/', views.update_procedure_file, name='update_file'),
-    
-    # API WYSIWYG Editor
-    path('api/procedure/create-wysiwyg/', views.create_procedure_wysiwyg, name='create_procedure_wysiwyg'),
-    path('api/category/<int:category_id>/update-wysiwyg/', views.update_procedure_wysiwyg, name='update_procedure_wysiwyg'),
     
     # API Ricerca Full-Text
     path('api/search/', views.search_procedures, name='search_procedures'),
