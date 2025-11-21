@@ -134,7 +134,7 @@ def profile_view(request):
         user.save()
         
         messages.success(request, 'Profilo aggiornato con successo!')
-        return redirect('profile')
+        return redirect('procedures:profile')
     
     return render(request, 'procedures/profile.html', {
         'user': user,
