@@ -27,9 +27,11 @@ sudo nano /etc/ssh/sshd_config
 
 Modificare i seguneti parametri:
 
-     PermitRootLogin yes
-     PasswordAuthentication yes
-     PermitEmptyPasswords no
+```bash
+PermitRootLogin yes
+PasswordAuthentication yes
+PermitEmptyPasswords no
+```
 
 ---
 
