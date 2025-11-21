@@ -33,6 +33,13 @@ PasswordAuthentication yes
 PermitEmptyPasswords no
 ```
 
+Installare ifconfig
+
+```bash
+apt update
+apt install -y net-tools 
+```
+
 ---
 
 ## 🎯 INSTALLAZIONE IN 3 PASSI
