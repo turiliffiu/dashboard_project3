@@ -332,7 +332,7 @@
         function updateUserRole() {
             const newRole = document.getElementById('roleSelect').value;
             
-            fetch(`/api/users/${currentUserId}/role/`, {
+            fetch(`/api/user/${currentUserId}/update-role/`, {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': '{{ csrf_token }}',
@@ -361,7 +361,7 @@
                 return;
             }
             
-            fetch(`/api/users/${userId}/toggle-active/`, {
+            fetch(`/api/user/${userId}/toggle-active/`, {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': '{{ csrf_token }}'
@@ -386,7 +386,7 @@
                 return;
             }
             
-            fetch(`/api/users/${userId}/delete/`, {
+            fetch(`/api/user/${userId}/delete/`, {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': '{{ csrf_token }}'
