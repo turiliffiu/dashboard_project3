@@ -36,12 +36,7 @@ Modificare i seguneti parametri:
 ### 1️⃣ Scarica lo script
 
 ```bash
-# Opzione A: Scarica direttamente (se disponibile online)
 wget https://raw.githubusercontent.com/turiliffiu/dashboard_project3/main/install.sh
-
-# Opzione B: Crea manualmente il file
-nano install.sh
-# (copia e incolla il contenuto dello script)
 ```
 
 ### 2️⃣ Rendi eseguibile
