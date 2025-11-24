@@ -209,7 +209,7 @@ print_step "STEP 7: CONFIGURAZIONE DJANGO"
 
 # Genera SECRET_KEY sicura senza dipendere da Django
 print_info "Generazione SECRET_KEY..."
-SECRET_KEY=$(openssl rand -base64 50 | tr -d "=+/" | cut -c1-50)
+SECRET_KEY=$(openssl rand -base64 47 | tr -d "=+/" | cut -c1-47)
 
 # Crea file .env
 print_info "Creazione file .env..."
