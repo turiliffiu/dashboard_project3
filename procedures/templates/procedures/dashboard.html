@@ -1,0 +1,1213 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Procedure Operative</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{% static 'images/favicon.ico' %}">
+    <link rel="icon" type="image/svg+xml" href="{% static 'images/favicon.svg' %}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'images/favicon-32.png' %}">
+    <link rel="icon" type="image/png" sizes="192x192" href="{% static 'images/favicon-192.png' %}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'images/favicon-192.png' %}">
+    <meta name="theme-color" content="#667eea">
+
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+    <!-- Quill Editor CSS -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <style>
+        /* Stili per la barra di ricerca */
+        .search-container {
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 15px 50px 15px 20px;
+            font-size: 1.1em;
+            border: 2px solid #ddd;
+            border-radius: 25px;
+            outline: none;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        
+        .search-box:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .search-icon {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.3em;
+            color: #666;
+        }
+        
+        .search-results {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+        
+        .search-results.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .search-result-item {
+            padding: 15px;
+            border-left: 4px solid #667eea;
+            margin-bottom: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .search-result-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+        
+        .search-result-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        
+        .search-result-icon {
+            font-size: 1.5em;
+        }
+        
+        .search-result-title {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .search-result-meta {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .search-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            background: #667eea;
+            color: white;
+            border-radius: 12px;
+            font-size: 0.8em;
+            margin-left: 10px;
+        }
+        
+        /* Stili per l'editor WYSIWYG */
+        .wysiwyg-container {
+            margin-top: 20px;
+        }
+        
+        #editor {
+            height: 400px;
+            background: white;
+            border-radius: 8px;
+        }
+        
+        .ql-toolbar {
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+        }
+        
+        .ql-container {
+            border-bottom-left-radius: 8px;
+            border-bottom-right-radius: 8px;
+            font-size: 1em;
+        }
+        
+        .editor-hint {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 12px;
+            margin-top: 10px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: #1976D2;
+        }
+        
+        /* Tab system per creazione procedure */
+        .tab-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            background: #f0f0f0;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+        
+        .tab-btn.active {
+            background: white;
+            border-color: #667eea;
+            color: #667eea;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .clear-search {
+            position: absolute;
+            right: 50px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            font-size: 1.2em;
+            color: #999;
+            display: none;
+        }
+        
+        .clear-search:hover {
+            color: #333;
+        }
+        
+        .clear-search.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1>📋 Dashboard Procedure Operative</h1>
+                    <p class="subtitle">Cerca, visualizza e gestisci le tue procedure operative</p>
+                </div>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    {% if user.profile.can_create %}
+                    <button class="btn btn-upload" onclick="openCreateModal()">
+                        ➕ Crea Nuova Procedura
+                    </button>
+                    {% endif %}
+                    <div class="user-menu">
+                        <button class="btn-user" onclick="toggleUserMenu()">
+                            👤 {{ user.username }}
+                        </button>
+                        <div class="user-dropdown" id="userDropdown">
+                            <a href="{% url 'procedures:profile' %}">👤 Il Mio Profilo</a>
+                            {% if user.profile.role == 'admin' %}
+                            <a href="{% url 'procedures:user_management' %}">👥 Gestione Utenti</a>
+                            {% endif %}
+                            <div class="dropdown-divider"></div>
+                            <a href="{% url 'procedures:logout' %}" style="color: #d63031;">🚪 Esci</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Barra di Ricerca -->
+        <div class="search-container">
+            <input type="text" 
+                   class="search-box" 
+                   id="searchInput" 
+                   placeholder="🔍 Cerca nelle procedure... (es. docker, git, linux)"
+                   autocomplete="off">
+            <span class="clear-search" id="clearSearch" onclick="clearSearch()">✕</span>
+            <span class="search-icon">🔍</span>
+        </div>
+
+        <!-- Risultati Ricerca -->
+        <div class="search-results" id="searchResults">
+            <h2 style="margin-bottom: 15px;">Risultati della ricerca: <span id="searchQuery"></span></h2>
+            <div id="searchResultsContent"></div>
+        </div>
+
+        <!-- Griglia Categorie -->
+        <div class="grid" id="cardsGrid">
+            {% for item in categories %}
+            <div class="card" 
+                 data-category-id="{{ item.category.id }}" 
+                 data-category-name="{{ item.category.name }}"
+                 data-category-icon="{{ item.category.icon }}"
+                 data-category-desc="{{ item.category.description }}"
+                 data-category-filename="{{ item.category.filename }}"
+                 data-can-edit="{{ item.can_edit|yesno:'true,false' }}"
+                 data-can-delete="{{ item.can_delete|yesno:'true,false' }}">
+                <div class="card-actions">
+                    <button class="btn-icon download-btn" title="Scarica File">📥</button>
+                    {% if item.can_edit %}
+                    <button class="btn-icon edit-btn" title="Modifica">✏️</button>
+                    {% endif %}
+                    {% if item.can_delete %}
+                    <button class="btn-icon btn-danger delete-btn" title="Elimina">🗑️</button>
+                    {% endif %}
+                </div>
+                <div class="card-clickable">
+                    <div class="card-icon">{{ item.category.icon }}</div>
+                    <div class="card-title">{{ item.category.name }}</div>
+                    <div class="card-desc">{{ item.category.description }}</div>
+                    {% if item.category.owner %}
+                    <div class="card-owner">👤 {{ item.category.owner.username }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pannello Contenuto -->
+        <div class="content-panel" id="contentPanel">
+            <div class="panel-header">
+                <h2 class="panel-title" id="panelTitle"></h2>
+                <button class="btn" onclick="closePanel()">✕ Chiudi</button>
+            </div>
+            <div id="panelContent"></div>
+        </div>
+
+        <!-- Modal Creazione Procedura -->
+        <div class="modal" id="createModal">
+            <div class="modal-content" style="max-width: 900px;">
+                <div class="modal-header">
+                    <h2>✨ Crea Nuova Procedura</h2>
+                    <button class="btn-close" onclick="closeCreateModal()">✕</button>
+                </div>
+                <div class="modal-body">
+                    <!-- Tab Buttons -->
+                    <div class="tab-buttons">
+                        <button class="tab-btn active" onclick="switchTab('upload')">
+                            📤 Carica File .txt
+                        </button>
+                        <button class="tab-btn" onclick="switchTab('wysiwyg')">
+                            ✏️ Editor Visuale
+                        </button>
+                    </div>
+
+                    <!-- Tab Content: Upload File -->
+                    <div id="uploadTab" class="tab-content active">
+                        <form id="uploadForm" enctype="multipart/form-data">
+                            <div class="form-group">
+                                <label for="fileInput">File .txt *</label>
+                                <input type="file" id="fileInput" name="file" accept=".txt" required>
+                                <small>Solo file .txt sono consentiti</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="nameInput">Nome Categoria *</label>
+                                <input type="text" id="nameInput" name="name" placeholder="Es: Comandi Docker" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="iconInput">Icona Emoji *</label>
+                                <input type="text" id="iconInput" name="icon" placeholder="Es: 🐳" maxlength="2" required>
+                                <small>Usa una emoji per rappresentare la categoria</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="descInput">Descrizione *</label>
+                                <textarea id="descInput" name="description" placeholder="Breve descrizione della procedura" rows="3" required></textarea>
+                            </div>
+
+                            <div class="alert alert-info" style="margin-top: 20px;">
+                                <strong>📝 Formato file richiesto:</strong><br>
+                                <code style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px;">
+                                    [SEZIONE]<br>
+                                    Descrizione sezione<br>
+                                    <br>
+                                    COMANDO: Etichetta comando<br>
+                                    comando da eseguire
+                                </code>
+                            </div>
+
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-secondary" onclick="closeCreateModal()">Annulla</button>
+                                <button type="submit" class="btn btn-primary">📤 Carica File</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Tab Content: WYSIWYG Editor -->
+                    <div id="wysiwygTab" class="tab-content">
+                        <form id="wysiwygForm">
+                            <div class="form-group">
+                                <label for="wysiwygNameInput">Nome Procedura *</label>
+                                <input type="text" id="wysiwygNameInput" name="name" placeholder="Es: Comandi Docker" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="wysiwygIconInput">Icona Emoji *</label>
+                                <input type="text" id="wysiwygIconInput" name="icon" placeholder="Es: 🐳" maxlength="2" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="wysiwygDescInput">Descrizione *</label>
+                                <textarea id="wysiwygDescInput" name="description" placeholder="Breve descrizione" rows="2" required></textarea>
+                            </div>
+
+                            <div class="wysiwyg-container">
+                                <label>Contenuto della Procedura *</label>
+                                <div id="editor"></div>
+                                <div class="editor-hint">
+                                    <strong>💡 Suggerimento:</strong> Usa <strong>Heading 2</strong> per le sezioni, 
+                                    <strong>Heading 3</strong> per i titoli dei comandi, e <strong>Code Block</strong> per i comandi.
+                                </div>
+                            </div>
+
+                            <div class="form-actions" style="margin-top: 20px;">
+                                <button type="button" class="btn btn-secondary" onclick="closeCreateModal()">Annulla</button>
+                                <button type="submit" class="btn btn-primary">✨ Crea Procedura</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div id="createProgress" style="display: none;">
+                        <div class="loading">Creazione in corso...</div>
+                    </div>
+                    
+                    <div id="createResult"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Modifica Categoria -->
+        <div class="modal" id="editModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>✏️ Modifica Categoria</h2>
+                    <button class="btn-close" onclick="closeEditModal()">✕</button>
+                </div>
+                <div class="modal-body">
+                    <form id="editForm">
+                        <input type="hidden" id="editCategoryId">
+                        <input type="hidden" id="editFilename">
+                        
+                        <div class="form-group">
+                            <label for="editNameInput">Nome Categoria *</label>
+                            <input type="text" id="editNameInput" name="name" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="editIconInput">Icona Emoji *</label>
+                            <input type="text" id="editIconInput" name="icon" maxlength="2" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="editDescInput">Descrizione *</label>
+                            <textarea id="editDescInput" name="description" rows="3" required></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="editFileInput">Aggiorna File (opzionale)</label>
+                            <input type="file" id="editFileInput" name="file" accept=".txt">
+                            <small>Lascia vuoto per mantenere il file esistente</small>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Annulla</button>
+                            <button type="submit" class="btn btn-primary">💾 Salva Modifiche</button>
+                        </div>
+                    </form>
+                    
+                    <div id="editProgress" style="display: none;">
+                        <div class="loading">Aggiornamento in corso...</div>
+                    </div>
+                    
+                    <div id="editResult"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Conferma Eliminazione -->
+        <div class="modal" id="deleteModal">
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h2>⚠️ Conferma Eliminazione</h2>
+                    <button class="btn-close" onclick="closeDeleteModal()">✕</button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="deleteCategoryId">
+                    <p id="deleteMessage" style="margin-bottom: 20px;"></p>
+                    
+                    <div class="alert alert-warning">
+                        <strong>⚠️ Attenzione:</strong> Questa azione eliminerà permanentemente la categoria e il file associato.
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">Annulla</button>
+                        <button type="button" class="btn btn-danger" onclick="executeDelete()">🗑️ Elimina Definitivamente</button>
+                    </div>
+                    
+                    <div id="deleteProgress" style="display: none; margin-top: 15px;">
+                        <div class="loading">Eliminazione in corso...</div>
+                    </div>
+                    
+                    <div id="deleteResult"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quill Editor JS -->
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+    
+    <script>
+        // CSRF Token
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                         '{{ csrf_token }}';
+
+        // ============================================
+        // INIZIALIZZA QUILL EDITOR
+        // ============================================
+        let quill = null;
+        let currentCategoryId = null;
+
+        function initializeQuillEditor() {
+            if (!quill) {
+                quill = new Quill('#editor', {
+                    theme: 'snow',
+                    modules: {
+                        toolbar: [
+                            [{ 'header': [2, 3, false] }],
+                            ['bold', 'italic', 'underline'],
+                            ['code-block'],
+                            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                            ['clean']
+                        ]
+                    },
+                    placeholder: 'Scrivi qui la tua procedura...\n\nUsa Heading 2 per le sezioni, Heading 3 per i comandi, e Code Block per il codice.'
+                });
+            }
+        }
+
+        // ============================================
+        // SISTEMA TAB
+        // ============================================
+        function switchTab(tabName) {
+            // Nascondi tutti i tab
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Mostra il tab selezionato
+            if (tabName === 'upload') {
+                document.getElementById('uploadTab').classList.add('active');
+                event.target.classList.add('active');
+            } else if (tabName === 'wysiwyg') {
+                document.getElementById('wysiwygTab').classList.add('active');
+                event.target.classList.add('active');
+                initializeQuillEditor();
+            }
+        }
+
+        // ============================================
+        // RICERCA FULL-TEXT
+        // ============================================
+        let searchTimeout = null;
+        const searchInput = document.getElementById('searchInput');
+        const searchResults = document.getElementById('searchResults');
+        const searchResultsContent = document.getElementById('searchResultsContent');
+        const clearSearchBtn = document.getElementById('clearSearch');
+        const cardsGrid = document.getElementById('cardsGrid');
+
+        searchInput.addEventListener('input', function(e) {
+            const query = e.target.value.trim();
+            
+            // Mostra/nascondi bottone clear
+            if (query.length > 0) {
+                clearSearchBtn.classList.add('active');
+            } else {
+                clearSearchBtn.classList.remove('active');
+                clearSearch();
+                return;
+            }
+            
+            // Debounce della ricerca
+            clearTimeout(searchTimeout);
+            
+            if (query.length < 2) {
+                return;
+            }
+            
+            searchTimeout = setTimeout(() => {
+                performSearch(query);
+            }, 500);
+        });
+
+        async function performSearch(query) {
+            try {
+                const response = await fetch(`/api/search/?q=${encodeURIComponent(query)}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    displaySearchResults(data);
+                    
+                    // Nascondi la griglia normale
+                    cardsGrid.style.display = 'none';
+                    searchResults.classList.add('active');
+                } else {
+                    console.error('Errore nella ricerca:', data.message);
+                }
+            } catch (error) {
+                console.error('Errore nella ricerca:', error);
+            }
+        }
+
+        function displaySearchResults(data) {
+            document.getElementById('searchQuery').textContent = `"${data.query}"`;
+            
+            if (data.total === 0) {
+                searchResultsContent.innerHTML = `
+                    <div class="no-results">
+                        <p style="font-size: 3em;">🔍</p>
+                        <p>Nessun risultato trovato per "${data.query}"</p>
+                        <p style="color: #999; margin-top: 10px;">Prova con parole chiave diverse</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            
+            data.results.forEach(result => {
+                if (result.type === 'category') {
+                    html += `
+                        <div class="search-result-item" onclick="openCategoryFromSearch(${result.category_id})">
+                            <div class="search-result-header">
+                                <span class="search-result-icon">${result.icon}</span>
+                                <span class="search-result-title">${result.category_name}</span>
+                                <span class="search-badge">Categoria</span>
+                            </div>
+                            <div class="search-result-meta">
+                                ${result.description}
+                                ${result.owner ? `<br>👤 ${result.owner}` : ''}
+                            </div>
+                        </div>
+                    `;
+
+                } else if (result.type === 'content') {
+                    const sectionsText = result.sections.map(s => s.title).join(', ');
+                    const matchCount = result.sections.reduce((sum, s) => sum + s.matching_commands, 0);
+                    
+                    // Costruisci la lista dei comandi trovati
+                    let commandsList = '';
+                    result.sections.forEach(section => {
+                        if (section.commands && section.commands.length > 0) {
+                            section.commands.forEach(cmd => {
+                                commandsList += `
+                                    <div class="command-match">
+                                        <strong>${cmd.label}</strong>
+                                        <pre class="command-preview">${cmd.cmd}</pre>
+                                    </div>
+                                `;
+                            });
+                        }
+                    });
+                    
+                    html += `
+                        <div class="search-result-item" onclick="openCategoryFromSearch(${result.category_id})">
+                            <div class="search-result-header">
+                                <span class="search-result-icon">${result.icon}</span>
+                                <span class="search-result-title">${result.category_name}</span>
+                                <span class="search-badge">${matchCount} comandi trovati</span>
+                            </div>
+                            <div class="search-result-meta">
+                                Sezioni: ${sectionsText}
+                                ${result.owner ? `<br>👤 ${result.owner}` : ''}
+                            </div>
+                            ${commandsList ? `<div class="commands-list">${commandsList}</div>` : ''}
+                        </div>
+                    `;
+                }
+
+            });
+            
+            searchResultsContent.innerHTML = html;
+        }
+
+        function openCategoryFromSearch(categoryId) {
+            // Trova la card corrispondente
+            const card = document.querySelector(`[data-category-id="${categoryId}"]`);
+            if (card) {
+                clearSearch();
+                card.querySelector('.card-clickable').click();
+            }
+        }
+
+        function clearSearch() {
+            searchInput.value = '';
+            clearSearchBtn.classList.remove('active');
+            searchResults.classList.remove('active');
+            cardsGrid.style.display = 'grid';
+            closePanel();
+        }
+
+        // ============================================
+        // GESTIONE CARDS E PANNELLO
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            // Gestione click sulle card
+            document.querySelectorAll('.card').forEach(card => {
+                // Click sul corpo della card
+                card.querySelector('.card-clickable').addEventListener('click', function() {
+                    const filename = card.dataset.categoryFilename;
+                    const categoryName = card.dataset.categoryName;
+                    const categoryId = card.dataset.categoryId;
+                    loadProcedure(filename, categoryName, categoryId);
+                    
+                    // Evidenzia card attiva
+                    document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
+                    card.classList.add('active');
+                });
+                
+                // Download button
+                const downloadBtn = card.querySelector('.download-btn');
+                if (downloadBtn) {
+                    downloadBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        downloadProcedure(card.dataset.categoryId);
+                    });
+                }
+                
+                // Edit button
+                const editBtn = card.querySelector('.edit-btn');
+                if (editBtn) {
+                    editBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        openEditModal(card.dataset.categoryId);
+                    });
+                }
+                
+                // Delete button
+                const deleteBtn = card.querySelector('.delete-btn');
+                if (deleteBtn) {
+                    deleteBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        confirmDelete(card.dataset.categoryId, card.dataset.categoryName);
+                    });
+                }
+            });
+        });
+
+        async function loadProcedure(filename, categoryName, categoryId) {
+            const panel = document.getElementById('contentPanel');
+            const panelTitle = document.getElementById('panelTitle');
+            const panelContent = document.getElementById('panelContent');
+            
+            panelTitle.textContent = categoryName;
+            panelContent.innerHTML = '<div class="loading">Caricamento...</div>';
+            panel.classList.add('active');
+            currentCategoryId = categoryId;
+            
+            try {
+                const response = await fetch(`/api/procedure/${filename}/`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayProcedure(data.sections, data.can_edit);
+                } else {
+                    panelContent.innerHTML = `<div class="alert alert-error">${data.error}</div>`;
+                }
+            } catch (error) {
+                panelContent.innerHTML = `<div class="alert alert-error">Errore nel caricamento: ${error.message}</div>`;
+            }
+        }
+
+        function displayProcedure(sections, canEdit = false) {
+            const panelContent = document.getElementById('panelContent');
+            let html = '';
+            
+            sections.forEach((section, sIndex) => {
+                html += `
+                    <div class="section">
+                        <h3 class="section-title">${section.title}</h3>
+                        <p class="section-desc">${section.desc}</p>
+                        <div class="commands">
+                `;
+                
+                section.commands.forEach((cmd, cIndex) => {
+                    const cmdId = `cmd-${sIndex}-${cIndex}`;
+                    html += `
+                        <div class="command-item" id="cmd-container-${cmdId}">
+                            <div class="command-header">
+                                <span class="command-label">${cmd.label}</span>
+                                <div class="command-actions">
+                                    <button class="btn-copy" onclick="copyToClipboard('${cmdId}')">📋 Copia</button>
+                                    ${canEdit ? `<button class="btn-edit" onclick="editCommand('${cmdId}', '${section.title}', '${cmd.label}')">✏️ Modifica</button>` : ''}
+                                </div>
+                            </div>
+                            <pre id="${cmdId}" class="command-code">${cmd.cmd}</pre>
+                            <div id="edit-${cmdId}" class="command-edit" style="display:none;">
+                                <textarea id="textarea-${cmdId}" class="command-textarea">${cmd.cmd}</textarea>
+                                <div class="edit-actions">
+                                    <button class="btn-save" onclick="saveCommand('${cmdId}', '${section.title}', '${cmd.label}')">💾 Salva</button>
+                                    <button class="btn-cancel" onclick="cancelEdit('${cmdId}')">✖️ Annulla</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += `
+                        </div>
+                    </div>
+                `;
+            });
+            
+            panelContent.innerHTML = html;
+        }
+
+        function closePanel() {
+            document.getElementById('contentPanel').classList.remove('active');
+      	      document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
+        }
+
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            const text = element.textContent;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                // Feedback visivo
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Copiato!';
+                btn.style.background = '#28a745';
+                
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = '';
+                }, 2000);
+            });
+        }
+
+        async function downloadProcedure(categoryId) {
+            try {
+                window.location.href = `/api/category/${categoryId}/download/`;
+            } catch (error) {
+                console.error('Errore nel download:', error);
+            }
+        }
+
+        // ============================================
+        // MODIFICA COMANDO INLINE
+        // ============================================
+        function editCommand(cmdId, sectionName, commandLabel) {
+            // Nascondi il pre e mostra il textarea
+            document.getElementById(cmdId).style.display = 'none';
+            document.getElementById('edit-' + cmdId).style.display = 'block';
+        }
+
+        function cancelEdit(cmdId) {
+            // Mostra il pre e nascondi il textarea
+            document.getElementById(cmdId).style.display = 'block';
+            document.getElementById('edit-' + cmdId).style.display = 'none';
+        }
+
+        async function saveCommand(cmdId, sectionName, commandLabel) {
+            const newCommand = document.getElementById('textarea-' + cmdId).value;
+            const categoryId = currentCategoryId; // Usa la variabile globale
+            
+            if (!newCommand.trim()) {
+                alert('Il comando non può essere vuoto!');
+                return;
+            }
+            
+            try {
+                const formData = new FormData();
+                formData.append('section', sectionName);
+                formData.append('command_label', commandLabel);
+                formData.append('new_command', newCommand);
+                
+                const response = await fetch(`/api/category/${categoryId}/update-command/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Aggiorna il contenuto visualizzato
+                    document.getElementById(cmdId).textContent = newCommand;
+                    cancelEdit(cmdId);
+                    
+                    // Feedback
+                    alert('✅ Comando aggiornato con successo!');
+                } else {
+                    alert('❌ Errore: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Errore:', error);
+                alert('❌ Errore durante il salvataggio: ' + error.message);
+            }
+        }
+
+        // ============================================
+        // GESTIONE CREAZIONE PROCEDURA
+        // ============================================
+        function openCreateModal() {
+            document.getElementById('createModal').classList.add('active');
+            document.getElementById('createResult').innerHTML = '';
+            
+            // Reset forms
+            document.getElementById('uploadForm').reset();
+            document.getElementById('wysiwygForm').reset();
+            if (quill) {
+                quill.setText('');
+            }
+            
+            // Switch to upload tab by default
+            switchTab('upload');
+        }
+
+        function closeCreateModal() {
+            document.getElementById('createModal').classList.remove('active');
+        }
+
+        // Upload Form Handler
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const progress = document.getElementById('createProgress');
+            const result = document.getElementById('createResult');
+            const formData = new FormData(this);
+            
+            progress.style.display = 'block';
+            result.innerHTML = '';
+            
+            try {
+                const response = await fetch('/api/upload/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                progress.style.display = 'none';
+                
+                if (data.success) {
+                    result.innerHTML = `
+                        <div class="alert" style="background: #d4edda; border-left-color: #28a745; color: #155724; margin-top: 20px;">
+                            ✅ ${data.message}
+                        </div>
+                    `;
+                    
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    result.innerHTML = `
+                        <div class="alert" style="background: #f8d7da; border-left-color: #dc3545; color: #721c24; margin-top: 20px;">
+                            ❌ ${data.error}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                progress.style.display = 'none';
+                result.innerHTML = `
+                    <div class="alert" style="background: #f8d7da; border-left-color: #dc3545; color: #721c24; margin-top: 20px;">
+                        ❌ Errore: ${error.message}
+                    </div>
+                `;
+            }
+        });
+
+        // WYSIWYG Form Handler
+        document.getElementById('wysiwygForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const progress = document.getElementById('createProgress');
+            const result = document.getElementById('createResult');
+            
+            progress.style.display = 'block';
+            result.innerHTML = '';
+            
+            try {
+                const formData = new FormData();
+                formData.append('name', document.getElementById('wysiwygNameInput').value);
+                formData.append('icon', document.getElementById('wysiwygIconInput').value);
+                formData.append('description', document.getElementById('wysiwygDescInput').value);
+                formData.append('content', quill.root.innerHTML);
+                
+                const response = await fetch('/api/procedure/create-wysiwyg/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                progress.style.display = 'none';
+                
+                if (data.success) {
+                    result.innerHTML = `
+                        <div class="alert" style="background: #d4edda; border-left-color: #28a745; color: #155724; margin-top: 20px;">
+                            ✅ ${data.message}
+                        </div>
+                    `;
+                    
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    result.innerHTML = `
+                        <div class="alert" style="background: #f8d7da; border-left-color: #dc3545; color: #721c24; margin-top: 20px;">
+                            ❌ ${data.error}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                progress.style.display = 'none';
+                result.innerHTML = `
+                    <div class="alert" style="background: #f8d7da; border-left-color: #dc3545; color: #721c24; margin-top: 20px;">
+                        ❌ Errore: ${error.message}
+                    </div>
+                `;
+            }
+        });
+
+        // ============================================
+        // GESTIONE MODIFICA CATEGORIA
+        // ============================================
+        function openEditModal(categoryId) {
+            const card = document.querySelector(`[data-category-id="${categoryId}"]`);
+            
+            document.getElementById('editCategoryId').value = categoryId;
+            document.getElementById('editFilename').value = card.dataset.categoryFilename;
+            document.getElementById('editNameInput').value = card.dataset.categoryName;
+            document.getElementById('editIconInput').value = card.dataset.categoryIcon;
+            document.getElementById('editDescInput').value = card.dataset.categoryDesc;
+            document.getElementById('editFileInput').value = '';
+            document.getElementById('editResult').innerHTML = '';
+            
+            document.getElementById('editModal').classList.add('active');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.remove('active');
+        }
+
+        document.getElementById('editForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const categoryId = document.getElementById('editCategoryId').value;
+            const progress = document.getElementById('editProgress');
+            const result = document.getElementById('editResult');
+            
+            progress.style.display = 'block';
+            result.innerHTML = '';
+            
+            try {
+                // Aggiorna metadati categoria
+                const formData = new FormData();
+                formData.append('name', document.getElementById('editNameInput').value);
+                formData.append('icon', document.getElementById('editIconInput').value);
+                formData.append('description', document.getElementById('editDescInput').value);
+                
+                const response = await fetch(`/api/category/${categoryId}/update/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error(data.error);
+                }
+                
+                // Se c'è un nuovo file, caricalo
+                const fileInput = document.getElementById('editFileInput');
+                if (fileInput.files.length > 0) {
+                    const fileFormData = new FormData();
+                    fileFormData.append('file', fileInput.files[0]);
+                    
+                    const fileResponse = await fetch(`/api/category/${categoryId}/update-file/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': csrftoken
+                        },
+                        body: fileFormData
+                    });
+                    
+                    const fileData = await fileResponse.json();
+                    if (!fileData.success) {
+                        throw new Error(fileData.error);
+                    }
+                }
+                
+                progress.style.display = 'none';
+                result.innerHTML = `
+                    <div class="alert" style="background: #d4edda; border-left-color: #28a745; color: #155724; margin-top: 20px;">
+                        ✅ Categoria aggiornata con successo!
+                    </div>
+                `;
+                
+                // Aggiorna la card nella griglia
+                const card = document.querySelector(`[data-category-id="${categoryId}"]`);
+                if (card) {
+                    card.setAttribute('data-category-name', data.category.name);
+                    card.setAttribute('data-category-icon', data.category.icon);
+                    card.setAttribute('data-category-desc', data.category.description);
+                    
+                    card.querySelector('.card-icon').textContent = data.category.icon;
+                    card.querySelector('.card-title').textContent = data.category.name;
+                    card.querySelector('.card-desc').textContent = data.category.description;
+                }
+                
+                setTimeout(() => {
+                    closeEditModal();
+                }, 1500);
+                
+            } catch (error) {
+                progress.style.display = 'none';
+                result.innerHTML = `
+                    <div class="alert" style="background: #f8d7da; border-left-color: #dc3545; color: #721c24; margin-top: 20px;">
+                        ❌ Errore: ${error.message}
+                    </div>
+                `;
+            }
+        });
+
+        // ============================================
+        // GESTIONE ELIMINAZIONE CATEGORIA
+        // ============================================
+        function confirmDelete(categoryId, categoryName) {
+            document.getElementById('deleteCategoryId').value = categoryId;
+            document.getElementById('deleteMessage').textContent = `Sei sicuro di voler eliminare la categoria "${categoryName}"?`;
+            document.getElementById('deleteResult').innerHTML = '';
+            document.getElementById('deleteModal').classList.add('active');
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').classList.remove('active');
+        }
+
+        async function executeDelete() {
+            const categoryId = document.getElementById('deleteCategoryId').value;
+            const progress = document.getElementById('deleteProgress');
+            const result = document.getElementById('deleteResult');
+            
+            progress.style.display = 'block';
+            result.innerHTML = '';
+            
+            try {
+                const response = await fetch(`/api/category/${categoryId}/delete/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrftoken
+                    }
+                });
+                
+                const data = await response.json();
+                
+                progress.style.display = 'none';
+                
+                if (data.success) {
+                    result.innerHTML = `
+                        <div class="alert" style="background: #d4edda; border-left-color: #28a745; color: #155724; margin-top: 20px;">
+                            ✅ ${data.message}
+                        </div>
+                    `;
+                    
+                    // Rimuovi la card dalla griglia
+                    const card = document.querySelector(`[data-category-id="${categoryId}"]`);
+                    if (card) {
+                        card.style.animation = 'fadeOut 0.3s ease';
+                        setTimeout(() => {
+                            card.remove();
+                        }, 300);
+                    }
+                    
+                    setTimeout(() => {
+                        closeDeleteModal();
+                    }, 1500);
+                    
+                } else {
+                    result.innerHTML = `
+                        <div class="alert" style="background: #f8d7da; border-left-color: #dc3545; color: #721c24; margin-top: 20px;">
+                            ❌ ${data.error}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                progress.style.display = 'none';
+                result.innerHTML = `
+                    <div class="alert" style="background: #f8d7da; border-left-color: #dc3545; color: #721c24; margin-top: 20px;">
+                        ❌ Errore: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // ============================================
+        // USER MENU
+        // ============================================
+        function toggleUserMenu() {
+            const dropdown = document.getElementById('userDropdown');
+            dropdown.classList.toggle('show');
+        }
+        
+        document.addEventListener('click', function(event) {
+            const userMenu = document.querySelector('.user-menu');
+            const dropdown = document.getElementById('userDropdown');
+            
+            if (userMenu && !userMenu.contains(event.target) && dropdown) {
+                dropdown.classList.remove('show');
+            }
+        });
+
+        // Chiudi modal cliccando fuori
+        window.onclick = function(event) {
+            const createModal = document.getElementById('createModal');
+            const editModal = document.getElementById('editModal');
+            const deleteModal = document.getElementById('deleteModal');
+            
+            if (event.target === createModal) {
+                closeCreateModal();
+            }
+            if (event.target === editModal) {
+                closeEditModal();
+            }
+            if (event.target === deleteModal) {
+                closeDeleteModal();
+            }
+        }
+    </script>
+</body>
+</html>
