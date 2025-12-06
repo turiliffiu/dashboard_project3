@@ -25,7 +25,7 @@ Sulla shell del nuovo Container su Proxmox:
 sudo nano /etc/ssh/sshd_config
 ```
 
-Modificare i seguneti parametri:
+Modificare i seguenti parametri:
 
 ```bash
 PermitRootLogin yes
